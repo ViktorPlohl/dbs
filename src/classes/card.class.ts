@@ -3,6 +3,7 @@ import {Skill} from "../types/skill.type";
 import {Color} from "../types/color";
 import {CardParser} from "./parser.class";
 import {ICard} from "../types/card.interface";
+import {ICardmarket} from "../types/cardmarket-card.interface";
 
 export class Card implements Partial<ICard> {
   availableInTournaments?: string;
@@ -15,6 +16,7 @@ export class Card implements Partial<ICard> {
   type?: CardType;
   era?: string;
   skill?: Skill;
+  cardmarket?: ICardmarket;
 
   constructor(parser: CardParser) {
     this.availableInTournaments = parser.parseAvailableInTournaments();

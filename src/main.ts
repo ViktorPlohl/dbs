@@ -9,13 +9,17 @@ import {BattleCard} from "./classes/battle-card.class";
 import {UnisonCard} from "./classes/unison-card.class";
 import {ImageDownloader} from "./classes/image-downloader.class";
 import {DbsCard} from "./types/card.interface";
+import {Seller} from "./types/seller.type";
+import {Cardmarket} from "./classes/cardmarket.class";
+import _ from "lodash";
 
 export const DBS_BASE_URL = 'http://www.dbs-cardgame.com';
 export const CARDMARKET_BASE_URL = 'https://www.cardmarket.com';
 
 export const CARD_JSON_PATH = 'cards.json';
+export const CARDMARKET_JSON_PATH = 'cardmarket.json';
 
-const shouldDownloadImages = true;
+const shouldDownloadImages = false;
 const shouldDownloadCards = false;
 const shouldGetPrices = true;
 
@@ -93,13 +97,45 @@ const createForm = (category: number): URLSearchParams  => {
   return formData;
 };
 
+
 const getPage = async (form: URLSearchParams): Promise<HTMLElement> => {
   const response = await fetch(DBS_BASE_URL +'/us-en/cardlist/?search=true', {method: 'POST', body: form as BodyInit});
   const data = await response.text();
   return parse(data)
 };
 
+const getPricePageRedirect = async (cardNumber: string): Promise<string> => {
+  const response = await fetch(CARDMARKET_BASE_URL +'/en/DragonBallSuper/Products/Search?searchString=' + cardNumber, {
+    method: 'GET',
+  });
+  return response.url;
+};
+
+const getSellers = async (url: string): Promise<Partial<Seller>[]> => {
+  let data = '';
+  if(url.search('cardNumber') === -1) {
+    const redirectResponse = await fetch(url, {method: 'GET'});
+    data = await redirectResponse.text();
+  }
+  const html = parse(data)
+  return html?.querySelectorAll('.table-body>.row').map((element) => {
+    return {
+      name: element?.querySelector('.col-sellerProductInfo .seller-name span.d-flex.has-content-centered.mr-1 a')?.text,
+      price: element?.querySelector('.col-offer .price-container')?.text,
+      amount: element?.querySelector('.col-offer .amount-container')?.text,
+    }
+  });
+};
+
 const storeCards = (data: DbsCard[], path: string) => {
+  try {
+    fs.writeFileSync(path, JSON.stringify(data, null, 4))
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const storeCardmarketSellers = (data: Cardmarket[], path: string) => {
   try {
     fs.writeFileSync(path, JSON.stringify(data, null, 4))
   } catch (err) {
@@ -144,6 +180,16 @@ async function loadPage(form: URLSearchParams): Promise<(LeaderCard|ExtraCard|Ba
   });
 }
 
+async function loadPricePage(cardNumber: string): Promise<Cardmarket> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, 5000);
+  });
+  const url = await getPricePageRedirect(cardNumber);
+  const sellers = await getSellers(url);
+
+  return new Cardmarket(sellers, url, cardNumber, new Date().toISOString());
+}
+
 async function downloadCards() {
   const cards: DbsCard[] = [];
   for (let i = 0; i < categories.length; i++){
@@ -172,11 +218,24 @@ async function downloadImages() {
   }
 }
 
-async function downloadPrices() {
+async function downloadCardmarketPrices() {
   const loadedCards: DbsCard[] = JSON.parse(loadStoredCards(CARD_JSON_PATH));
-  loadedCards.forEach(card => {
-    card.number
-  });
+  const loadedSellers: Cardmarket[] = JSON.parse(loadStoredCards(CARDMARKET_JSON_PATH));
+  const cardNumbers: string[] = _.uniq(loadedCards.map(card => card.number?.split('_')[0] as string));
+  for (const cardNumber of cardNumbers) {
+    const cardmarket = loadedSellers.find(cardmarket => cardmarket.cardNumber === cardNumber);
+    const cardmarketIndex = loadedSellers.findIndex(cardmarket => cardmarket.cardNumber === cardNumber);
+    if(cardmarket?.sellers === undefined || cardmarket.sellers?.length === 0) {
+      const parsedCardmarket = await loadPricePage(cardNumber);
+      if(cardmarketIndex !== -1) {
+        loadedSellers[cardmarketIndex] = parsedCardmarket;
+      } else {
+        loadedSellers.push(parsedCardmarket);
+      }
+      console.log(cardNumber, 'Nb.of.S: ' + parsedCardmarket?.sellers?.length);
+      storeCardmarketSellers(loadedSellers, CARDMARKET_JSON_PATH)
+    }
+  }
 }
 
 
@@ -188,7 +247,7 @@ export async function main(): Promise<void> {
     await downloadImages()
   }
   if(shouldGetPrices) {
-    await downloadPrices()
+    await downloadCardmarketPrices()
   }
 }
 

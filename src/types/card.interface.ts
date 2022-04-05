@@ -1,11 +1,12 @@
-import {Skill} from "../../../dbs/src/types/skill.type";
-import {Energy} from "../../../dbs/src/types/energy.type";
+import {Skill} from "./skill.type";
+import {Energy} from "./energy.type";
 import {CardType} from "./card-type.type";
-import {Color} from "../../../dbs/src/types/color";
-import {LeaderCard} from "../../../dbs/src/classes/leader-card.class";
-import {ExtraCard} from "../../../dbs/src/classes/extra-card.class";
-import {BattleCard} from "../../../dbs/src/classes/battle-card.class";
-import {UnisonCard} from "../../../dbs/src/classes/unison-card.class";
+import {Color} from "./color";
+import {LeaderCard} from "../classes/leader-card.class";
+import {ExtraCard} from "../classes/extra-card.class";
+import {BattleCard} from "../classes/battle-card.class";
+import {UnisonCard} from "../classes/unison-card.class";
+import {ICardmarket} from "./cardmarket-card.interface";
 
 export interface ICard {
   number: string;
@@ -18,6 +19,7 @@ export interface ICard {
   image: string;
   skill: Skill;
   era: string;
+  cardmarket: ICardmarket;
 }
 
 export interface IBattleCard extends ICard  {
