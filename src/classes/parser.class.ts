@@ -17,6 +17,9 @@ type CardDetail = {
 export class CardParser {
   details: Partial<CardDetail>;
 
+  public static specialTraitsRegex = new RegExp('《(.*?)》', 'g');
+  public static charactersRegex = new RegExp('＜(.*?)＞', 'g')
+
   constructor(card: HTMLElement) {
     this.details = this.getCardDetail(card);
   }
@@ -207,7 +210,13 @@ export class CardParser {
   private getSkill = (skill: HTMLElement): Skill => {
     const skillImgs = skill.querySelectorAll('.skillText');
     const skills = _.uniq(skillImgs.map(img => img.getAttribute('alt') as string));
+    const charactersMatchArray = skill.toString().match(CardParser.charactersRegex);
+    const characters: string[] = _.uniq(_.map(charactersMatchArray, match => match.slice(1, -1).replace('＜', '')))// Replace is needed because in some cases data is wrongly formatted
+    const specialTraitsMatchArray = skill.toString().match(CardParser.specialTraitsRegex);
+    const specialTraits: string[] = _.uniq(_.map(specialTraitsMatchArray, match => match.slice(1, -1)))
     return {
+      specialTraits: specialTraits,
+      characters: characters,
       keywords: skills,
       text: skill.innerHTML
     }

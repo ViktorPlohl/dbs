@@ -12,16 +12,19 @@ import {DbsCard} from "./types/card.interface";
 import {Seller} from "./types/seller.type";
 import {Cardmarket} from "./classes/cardmarket.class";
 import _ from "lodash";
+import {formatSkills} from "./utils/skill-formatter.util";
 
 export const DBS_BASE_URL = 'http://www.dbs-cardgame.com';
 export const CARDMARKET_BASE_URL = 'https://www.cardmarket.com';
 
 export const CARD_JSON_PATH = 'cards.json';
+export const FORMATTED_CARD_JSON_PATH = 'cards_formatted.json';
 export const CARDMARKET_JSON_PATH = 'cardmarket.json';
 
-const shouldDownloadImages = false;
 const shouldDownloadCards = false;
-const shouldGetPrices = true;
+const shouldDownloadImages = false;
+const shouldFormatCardSkills = true;
+const shouldGetPrices = false;
 
 const categories: number[] = [
   428016,
@@ -201,6 +204,12 @@ async function downloadCards() {
   storeCards(cards, CARD_JSON_PATH)
 }
 
+async function formatCardSkills() {
+  const loadedCardsRaw: string = loadStoredCards(CARD_JSON_PATH);
+  const loadedCards: DbsCard[] = JSON.parse(loadedCardsRaw);
+  storeCards(formatSkills(loadedCards), FORMATTED_CARD_JSON_PATH)
+}
+
 async function downloadImages() {
   const loadedCards: DbsCard[] = JSON.parse(loadStoredCards(CARD_JSON_PATH));
   const images: ImageDownloader[] = [];
@@ -243,6 +252,11 @@ export async function main(): Promise<void> {
   if(shouldDownloadCards) {
     await downloadCards()
   }
+
+  if(shouldFormatCardSkills) {
+    await formatCardSkills()
+  }
+
   if(shouldDownloadImages) {
     await downloadImages()
   }
